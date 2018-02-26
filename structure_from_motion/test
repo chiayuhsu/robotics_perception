@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "sfm.py", line 19, in <module>
+    main()
+  File "sfm.py", line 16, in main
+    preprocess()
+  File "sfm.py", line 13, in preprocess
+    file = np.load(os.path.join(siftPath, f))
+  File "/home/ubuntu/.local/lib/python2.7/site-packages/numpy/lib/npyio.py", line 431, in load
+    "Failed to interpret file %s as a pickle" % repr(file))
+IOError: Failed to interpret file './sift/02e209db320317344c9d31ccdb102792.jpg.sift' as a pickle
