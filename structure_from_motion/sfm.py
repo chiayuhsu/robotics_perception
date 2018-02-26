@@ -15,19 +15,16 @@ def preprocess():
         if f.endswith(".sift"):
             numOfFiles += 1
             with open(os.path.join(siftPath, f), "r") as openedFile:
-                oneImageFeatures = np.array([])
-                oneSpotFeature = []
- 
-                for line in openedFile:
-                    lineSplit = line.split()
-                    if len(lineSplit) == 20:
-                        oneSpotFeature += lineSplit
-                    elif len(lineSplit) == 8:
-                        oneSpotFeature += lineSplit
-                        oneImageFeatures = np.append(oneImageFeatures, np.asarray(oneSpotFeature), axis=0)
-                        oneSpotFeature = []
-
-                oneImageFeatures = oneImageFeatures.reshape(oneImageFeatures.shape[0]/128, 128).astype(np.float)
+                lines = openedFile.read().splitlines()
+                npLines = np.asarray(lines)
+                oneImageFeatures = npLines[2::8]
+                for index in range(3,9):
+                    oneImageFeatures = np.core.defchararray.add(oneImageFeatures, npLines[index::8])
+                oneImageFeatures = np.asarray(np.core.defchararray.split(np.array([''.join(oneImageFeatures)]))[0]).astype(np.float)
+                oneImageFeatures = oneImageFeatures.reshape(oneImageFeatures.shape[0]/128, 128)
+                print oneImageFeatures[0,:]
+                print oneImageFeatures[-1,:]
+                raw_input()
                 allImagesFeatures.append(oneImageFeatures)
                 print "progress: {} / 150".format(numOfFiles)
 
