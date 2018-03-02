@@ -3,9 +3,15 @@
 import numpy as np
 import os
 import time
+import cv2
+import pickle
+import csv
 
-siftPath = "./sift"
+siftPath = "./testsift"
+NOI = 10 # number of images
 allImagesFeatures = []
+fileName = []
+resultScore = np.zeros((NOI,NOI))
 
 def preprocess():
     siftFiles = os.listdir(siftPath)
@@ -13,6 +19,7 @@ def preprocess():
    
     for f in siftFiles:
         if f.endswith(".sift"):
+            fileName.append(f)
             numOfFiles += 1
             with open(os.path.join(siftPath, f), "r") as openedFile:
                 lines = openedFile.read().splitlines()
@@ -20,18 +27,57 @@ def preprocess():
                 oneImageFeatures = npLines[2::8]
                 for index in range(3,9):
                     oneImageFeatures = np.core.defchararray.add(oneImageFeatures, npLines[index::8])
-                oneImageFeatures = np.asarray(np.core.defchararray.split(np.array([''.join(oneImageFeatures)]))[0]).astype(np.float)
+                oneImageFeatures = np.asarray(np.core.defchararray.split(np.array([''.join(oneImageFeatures)]))[0]).astype(np.float32)
                 oneImageFeatures = oneImageFeatures.reshape(oneImageFeatures.shape[0]/128, 128)
-                print oneImageFeatures[0,:]
-                print oneImageFeatures[-1,:]
-                raw_input()
                 allImagesFeatures.append(oneImageFeatures)
-                print "progress: {} / 150".format(numOfFiles)
+                print "progress: {} / {}".format(numOfFiles, NOI)
+    #with open('allImagesFeatures', 'wb') as fp:
+    #    pickle.dump(allImagesFeatures, fp)
+
+def matching():
+    #with open('allImagesFeatures', 'rb') as fp:
+    #    allImagesFeatures = pickle.load(fp)
+    bf = cv2.BFMatcher()
+    for i in range(len(allImagesFeatures)):
+        matchPercent = [1]
+        print "Matching {}th image:".format(i+1)
+        for j in range(i+1, NOI):
+            matches = bf.knnMatch(allImagesFeatures[i], allImagesFeatures[j], k=2)
+            goodMatch = 0
+            print matches
+            for m, n in matches:
+                if m.distance < 0.75*n.distance:
+                    goodMatch += 1
+            matchPercent.append(float(goodMatch) / len(matches))
+            print "progress: {} / {}".format(j-i, NOI-i-1)
+        resultScore[i,i:] = np.asarray(matchPercent)
+        resultScore[i:,i] = np.asarray(matchPercent)
+        print resultScore        
+
+def savetofile():
+    with open('output.csv', 'wb') as csvfile:
+        csvwriter = csv.writer(csvfile, delimiter=',')
+        csvwriter.writerow(['ImageName', 'FirstMatchImage', 'FirstMatchScore', 'SecondMatchImage', 'SecondMatchScore','ThirdMatchImage', 'ThirdMatchScore','FourthMatchImage', 'FourthMatchScore','FifthMatchImage', 'FifthMatchScore'])
+        for i in range(NOI):
+            orderIndex = np.flip(np.argsort(resultScore[i,:]), axis=0)
+            score = np.round(resultScore[i,orderIndex[0:6]] * 100).astype(int)
+            writeList = [fileName[i][:-5]]
+            for j in range(5):
+                writeList.append(fileName[orderIndex[j+1]][:-5])
+                writeList.append(score[j+1])
+            csvwriter.writerow(writeList) 
 
 def main():
+    print "Loading feature files..."
+    startTime = time.time()
     preprocess()
+    print  "Processing time: {} seconds".format(time.time()-startTime)
+    print "Matching images..."
+    startTime = time.time()
+    matching()
+    print  "Processing time: {} seconds".format(time.time()-startTime)
+    savetofile()    
+
 
 if __name__ == '__main__':
-    startTime = time.time()
     main()
-    print  "processing time: {} seconds".format(time.time()-startTime)
