@@ -7,8 +7,8 @@ import cv2
 import pickle
 import csv
 
-siftPath = "./testsift"
-NOI = 10 # number of images
+siftPath = "./sift"
+NOI = 150 # number of images
 allImagesFeatures = []
 fileName = []
 resultScore = np.zeros((NOI,NOI))
@@ -31,20 +31,18 @@ def preprocess():
                 oneImageFeatures = oneImageFeatures.reshape(oneImageFeatures.shape[0]/128, 128)
                 allImagesFeatures.append(oneImageFeatures)
                 print "progress: {} / {}".format(numOfFiles, NOI)
-    #with open('allImagesFeatures', 'wb') as fp:
-    #    pickle.dump(allImagesFeatures, fp)
 
 def matching():
-    #with open('allImagesFeatures', 'rb') as fp:
-    #    allImagesFeatures = pickle.load(fp)
     bf = cv2.BFMatcher()
     for i in range(len(allImagesFeatures)):
         matchPercent = [1]
         print "Matching {}th image:".format(i+1)
         for j in range(i+1, NOI):
+            st = time.time()
             matches = bf.knnMatch(allImagesFeatures[i], allImagesFeatures[j], k=2)
+            print "{}".format(time.time()-st)             
+            
             goodMatch = 0
-            print matches
             for m, n in matches:
                 if m.distance < 0.75*n.distance:
                     goodMatch += 1
@@ -52,7 +50,6 @@ def matching():
             print "progress: {} / {}".format(j-i, NOI-i-1)
         resultScore[i,i:] = np.asarray(matchPercent)
         resultScore[i:,i] = np.asarray(matchPercent)
-        print resultScore        
 
 def savetofile():
     with open('output.csv', 'wb') as csvfile:
