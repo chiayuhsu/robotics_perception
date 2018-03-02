@@ -6,6 +6,9 @@ import time
 import cv2
 import pickle
 import csv
+from joblib import Parallel, delayed
+import multiprocessing
+
 
 siftPath = "./sift"
 NOI = 150 # number of images
@@ -32,24 +35,24 @@ def preprocess():
                 allImagesFeatures.append(oneImageFeatures)
                 print "progress: {} / {}".format(numOfFiles, NOI)
 
-def matching():
+def matching(i):
     bf = cv2.BFMatcher()
-    for i in range(len(allImagesFeatures)):
-        matchPercent = [1]
-        print "Matching {}th image:".format(i+1)
-        for j in range(i+1, NOI):
-            st = time.time()
-            matches = bf.knnMatch(allImagesFeatures[i], allImagesFeatures[j], k=2)
-            print "{}".format(time.time()-st)             
+   # for i in range(len(allImagesFeatures)):
+    matchPercent = [1]
+    print "Matching {}th image:".format(i+1)
+    for j in range(i+1, NOI):
+        st = time.time()
+        matches = bf.knnMatch(allImagesFeatures[i], allImagesFeatures[j], k=2)
+        print "{}".format(time.time()-st)             
             
-            goodMatch = 0
-            for m, n in matches:
-                if m.distance < 0.75*n.distance:
-                    goodMatch += 1
-            matchPercent.append(float(goodMatch) / len(matches))
-            print "progress: {} / {}".format(j-i, NOI-i-1)
-        resultScore[i,i:] = np.asarray(matchPercent)
-        resultScore[i:,i] = np.asarray(matchPercent)
+        goodMatch = 0
+        for m, n in matches:
+            if m.distance < 0.75*n.distance:
+                goodMatch += 1
+        matchPercent.append(float(goodMatch) / len(matches))
+        print "progress: {} / {}".format(j-i, NOI-i-1)
+    resultScore[i,i:] = np.asarray(matchPercent)
+    resultScore[i:,i] = np.asarray(matchPercent)
 
 def savetofile():
     with open('output.csv', 'wb') as csvfile:
@@ -71,7 +74,9 @@ def main():
     print  "Processing time: {} seconds".format(time.time()-startTime)
     print "Matching images..."
     startTime = time.time()
-    matching()
+    numCores = multiprocessing.cpu_count()
+    Parallel(n_jobs=numCores)(delayed(matching)(i) for i in range(len(allImagesFeatures)))
+    #matching()
     print  "Processing time: {} seconds".format(time.time()-startTime)
     savetofile()    
 
