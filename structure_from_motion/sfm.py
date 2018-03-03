@@ -41,18 +41,21 @@ def matching(i):
     matchPercent = [1]
     print "Matching {}th image:".format(i+1)
     for j in range(i+1, NOI):
-        st = time.time()
+        #st = time.time()
         matches = bf.knnMatch(allImagesFeatures[i], allImagesFeatures[j], k=2)
-        print "{}".format(time.time()-st)             
+        #print "{}".format(time.time()-st)             
             
         goodMatch = 0
         for m, n in matches:
             if m.distance < 0.75*n.distance:
                 goodMatch += 1
         matchPercent.append(float(goodMatch) / len(matches))
-        print "progress: {} / {}".format(j-i, NOI-i-1)
-    resultScore[i,i:] = np.asarray(matchPercent)
-    resultScore[i:,i] = np.asarray(matchPercent)
+        #print "progress: {} / {}".format(j-i, NOI-i-1)
+    #resultScore[i,i:] = np.asarray(matchPercent)
+    #resultScore[i:,i] = np.asarray(matchPercent)
+    #print resultScore
+    print "Finished matching {}th image:".format(i+1)
+    return np.asarray(matchPercent)
 
 def savetofile():
     with open('output.csv', 'wb') as csvfile:
@@ -75,7 +78,11 @@ def main():
     print "Matching images..."
     startTime = time.time()
     numCores = multiprocessing.cpu_count()
-    Parallel(n_jobs=numCores)(delayed(matching)(i) for i in range(len(allImagesFeatures)))
+    resultList = Parallel(n_jobs=numCores)(delayed(matching)(i) for i in range(len(allImagesFeatures)))
+    for i in range(len(resultList)):
+        resultScore[i,i:] = resultList[i]
+        resultScore[i:,i] = resultList[i]
+     
     #matching()
     print  "Processing time: {} seconds".format(time.time()-startTime)
     savetofile()    
