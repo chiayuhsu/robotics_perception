@@ -14,7 +14,6 @@ siftPath = "./sift"
 NOI = 150 # number of images
 allImagesFeatures = []
 fileName = []
-resultScore = np.zeros((NOI,NOI))
 
 def preprocess():
     siftFiles = os.listdir(siftPath)
@@ -37,24 +36,22 @@ def preprocess():
 
 def matching(i):
     bf = cv2.BFMatcher()
-   # for i in range(len(allImagesFeatures)):
-    matchPercent = [1]
-    print "Matching {}th image:".format(i+1)
-    for j in range(i+1, NOI):
-        st = time.time()
-        matches = bf.knnMatch(allImagesFeatures[i], allImagesFeatures[j], k=2)
-        print "{}".format(time.time()-st)             
-            
-        goodMatch = 0
-        for m, n in matches:
-            if m.distance < 0.75*n.distance:
-                goodMatch += 1
-        matchPercent.append(float(goodMatch) / len(matches))
-        print "progress: {} / {}".format(j-i, NOI-i-1)
-    resultScore[i,i:] = np.asarray(matchPercent)
-    resultScore[i:,i] = np.asarray(matchPercent)
+    matchPercent = []
+    print "Matching {}th image...".format(i+1)
+    for j in range(NOI):
+        if j != i:
+            matches = bf.knnMatch(allImagesFeatures[i], allImagesFeatures[j], k=2)
+            goodMatch = 0
+            for m, n in matches:
+                if m.distance < 0.75*n.distance:
+                    goodMatch += 1
+            matchPercent.append(float(goodMatch) / len(matches))
+        else:
+            matchPercent.append(1)
+    print "Finished matching {}th image".format(i+1)
+    return np.asarray(matchPercent)
 
-def savetofile():
+def savetofile(resultScore):
     with open('output.csv', 'wb') as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=',')
         csvwriter.writerow(['ImageName', 'FirstMatchImage', 'FirstMatchScore', 'SecondMatchImage', 'SecondMatchScore','ThirdMatchImage', 'ThirdMatchScore','FourthMatchImage', 'FourthMatchScore','FifthMatchImage', 'FifthMatchScore'])
@@ -75,10 +72,9 @@ def main():
     print "Matching images..."
     startTime = time.time()
     numCores = multiprocessing.cpu_count()
-    Parallel(n_jobs=numCores)(delayed(matching)(i) for i in range(len(allImagesFeatures)))
-    #matching()
+    resultScore = Parallel(n_jobs=numCores)(delayed(matching)(i) for i in range(len(allImagesFeatures)))
     print  "Processing time: {} seconds".format(time.time()-startTime)
-    savetofile()    
+    savetofile(np.asarray(resultScore))    
 
 
 if __name__ == '__main__':
